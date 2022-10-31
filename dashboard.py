@@ -8,13 +8,14 @@ from dash import html
 from dash import dcc
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
+from dash_bootstrap_templates import load_figure_template
 import numpy as np
 import matplotlib.pyplot as plt
 from plotly_calplot import calplot
 # import calplot
 from datetime import date
 import dash_bootstrap_components as dbc
-
+load_figure_template("SLATE")
 
 # print(px.data.gapminder()[:15])
 
@@ -50,11 +51,11 @@ country_name_to_iso2 = {
 }
 
 
-app = dash.Dash(__name__, external_stylesheets=None)
+app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
 
 
-df = pd.read_csv('light2')
-# df = pd.read_csv('light2')
+# df = pd.read_csv('dataset_with_timestamp')
+df = pd.read_csv('light')
 
 
 df_dict = {
@@ -133,78 +134,90 @@ def num_events(daily_cp, mini_cons_day):
 
 # ---------------------------------------------------------------
 app.layout = html.Div([
-    html.H1(id='test'),
-    html.Div([
 
 
-        html.Div([
-            html.P("temporal resolution: ", style={'display': 'inline'}), dcc.RadioItems(options=[
-                {'label': 'yearly', 'value': 'year'},
-                {'label': 'monthly', 'value': 'month'},
-                {'label': 'hourly', 'value': 'hour'}], style={'display': 'inline'},
-                id="period_radio", value="year"),
-            dcc.RangeSlider(1979, 2019, 1, value=[1979, 2019], id='range_slider', marks={
-                            i: str(i) for i in range(1979, 2020, 2)}, tooltip={"placement": "bottom", "always_visible": True}),
+    dbc.Col(
+        dbc.Card(
+            dbc.CardBody([
+                dbc.Row([
+                   
+                        dbc.Col([
+                        dcc.Dropdown(options=[
+                            {'label': 'yearly capacity factor', 'value': 'year'},
+                            {'label': 'monthly capacity factor', 'value': 'month'},
+                            {'label': 'hourly capacity factor', 'value': 'hour'}],
+                            id="period_radio", value="year", optionHeight=60),
+                        ]),
+                        dbc.Col([
+                        dcc.Dropdown(options=[{'label': 'Average', 'value': 'avg'},
+                                              {'label': 'Standard deviation of the', 'value': 'std'}],
+                                     id="avg_std", value="avg", optionHeight=60,),
+                        ]),
+                ]),
+                dbc.Row([
+                 
+                        dcc.Graph(id='map', style={'height': '50vh'})
+                ]),
 
 
-        ], style={'text-align': 'center', 'height': '10vh'}),  # "margin-bottom":0}),
+              
+                dbc.Row(dcc.RangeSlider(1979, 2019, 1, value=[1979, 2019], id='range_slider', marks={
+                    i: {"label":str(i)} for i in range(1979, 2020, 5)}, tooltip={"placement": "bottom", "always_visible": True})
+                ),
 
+                dbc.Row(
+                    dcc.Graph(id='distribution', style={'height': '20vh'})
+                )
+            ]), style={"height": "90vh", "width": "45vw"}
+        ), style={"display": "flex", "justifyContent":"center"}),
 
-        html.Div([
-            dcc.Graph(id='distribution', style={
-                      'height': '15vh', "margin-bottom": 50})
-        ]),
+    dbc.Col(
+        dbc.Card(
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col([
+                        dcc.Dropdown(['Min, Max, Avg monthly capacity factor',
+                                                'Min, Max, Avg hourly capacity factor', 'Monthly variation range',
+                                                'Hourly variation range',
+                                                "Cumulative days above thresholds",
+                                                'Low power events',
+                                                'Daily capacity factor distribution'],
+                                            'Hourly variation range', id='dropdown'),
+                                
+                        # 'height': '60vh'}),
+                    ]),
 
+                    dbc.Col([
+                        dcc.Dropdown(options=[{'label': x, 'value': x} for x in range(
+                            1979, 2019)], value=1979, id="year_picker")], id="year_picker_div", style={"display": "none"}),
 
+                
+                    dbc.Col([
+                            dcc.DatePickerRange(
+                            end_date=date(2019, 12, 1),
+                            display_format='D/M/Y',
+                            start_date_placeholder_text='D/M/Y',
+                            end_date_placeholder_text='D/M/Y',
+                            start_date=date(1979, 1, 1),
+                            id="date_picker",
+                            style={"height": "36px"}
+                        ),
+                        ], id="date_picker_div", style={"display": "none"}, width=7)
 
-        html.Div([
-            dcc.Graph(id='map', style={'height': '50vh'},),
-            dcc.RadioItems(options=[{'label': 'Average yearly capacity factor', 'value': 'avg'},
-                                    {'label': 'Standard deviation of yearly capacity factor', 'value': 'std'}], inline=True,
-                           id="avg_std", value="avg")
-        ]),
-
-
-
-
-    ], style={'text-align': 'center', "width": "50vw", 'border-right': '2px solid grey'}),
-
-    html.Div([
-        html.Div([dcc.Dropdown(['Min, Max, Avg monthly capacity factor',
-                                'Min, Max, Avg hourly capacity factor', 'Monthly variation range',
-                                'Hourly variation range',
-                                "Cumulative days above thresholds",
-                                'Low wind power events',
-                                'Daily capacity factor distribution'],
-                               'Hourly variation range', id='dropdown'),
-                  ]),
-        # 'height': '60vh'}),
-
-
-        html.Div([
-            dcc.DatePickerRange(
-                end_date=date(2019, 12, 1),
-                display_format='D/M/Y',
-                start_date_placeholder_text='D/M/Y',
-                end_date_placeholder_text='D/M/Y',
-                start_date=date(1979, 1, 1),
-                id="date_picker"
-            )], id="date_picker_div", style={"display": "none"}),
-
-
-        html.Div(children=[], id='side_graph', style={}),
-
+                ]),
 
 
 
-        html.Div([
-            dcc.Dropdown(options=[{'label': x, 'value': x} for x in range(
-                1979, 2019)], value=1979, id="year_picker")], id="year_picker_div", style={"display": "none"}),
+                
+                    dbc.Row(children=[], id='side_graph', style={}),
 
 
-    ], style={'text-align': 'center', "width": "50vw"})
 
-], style={"display": "flex", })
+
+
+            ]), style={"height": "90vh", "width": "45vw"}), style={"display": "flex", "justifyContent":"center"})
+
+], style={"height": "100vh","display": "flex","justifyContent":"center","alignItems":"center", "flexDirection": "row"})  # style={"display": "flex", })
 
 
 # ---------------------------------------------------------------
@@ -213,17 +226,15 @@ app.layout = html.Div([
     [Output(component_id='range_slider', component_property='min'),
      Output(component_id='range_slider', component_property='max'),
      Output(component_id='range_slider', component_property='marks'),
-     Output(component_id='range_slider', component_property='value'),
-     Output(component_id='avg_std', component_property='options')],
+     Output(component_id='range_slider', component_property='value'),],
     Input(component_id='period_radio', component_property='value')
 )
 def update_slider(period_radio):
     min = df_dict[period_radio][period_radio].min()
     max = df_dict[period_radio][period_radio].max()
 
-    avg_std_options = [{"label": "Average {}ly capacity factor".format(period_radio), "value": "avg"},
-                       {"label": "Standard deviation of {}ly capacity factor".format(period_radio), "value": "std"}]
-    return min, max, {i: str(i) for i in range(min, max, 2)}, [min, max], avg_std_options
+
+    return min, max, {i: str(i) for i in range(min, max, 5)}, [min, max]
 
 
 @app.callback(
@@ -251,18 +262,17 @@ def update_map(period_radio, avg_std, range):
                                    # animation_group ='Area_Name',       #dataframe
                                    color=df.values,  # dataframe
                                    #    range_color=[0, 0.5],
-                                   zoom=1, center={"lat": 56.4, "lon": 15.0},
+                                   zoom=1.5, center={"lat": 56.4, "lon": 15.0},
                                    mapbox_style="carto-positron",
-
                                    color_continuous_scale="Viridis",
                                    opacity=0.5,
 
-
                                    title='',
                                    )
-        fig.update_layout(
-            title={"text": 'Average capacity factor of European countries'})
+        # fig.update_layout(
+        #     title={"text": 'Average capacity factor of European countries'})
         fig.update_layout(clickmode='event+select')
+        fig.update_layout(margin=dict(l=20, r=20, t=20, b=40))
         fig.update_layout(
             coloraxis_colorbar=dict(
                 title="Capacity <br>factor",
@@ -274,9 +284,7 @@ def update_map(period_radio, avg_std, range):
             )
         )
 
-        fig.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-        )
+
 
         fig.update_layout(
             xaxis=go.layout.XAxis(
@@ -330,11 +338,9 @@ def update_plot(period_radio, range, click):
     [Input("map", "selectedData"),
      Input("dropdown", "value"),
      Input("year_picker", "value"),
-     Input("date_picker", "start_date"),
-     Input("date_picker", "end_date"),
      ]
 )
-def update_side_graph(click, fig_choice, year, start, end):
+def update_side_graph(click, fig_choice, year):
     if fig_choice is None:
         raise PreventUpdate
 
@@ -378,6 +384,8 @@ def update_side_graph(click, fig_choice, year, start, end):
                 array=[eu_mean_hourly_cp-eu_min_hourly_cp],
                 arrayminus=[eu_max_hourly_cp-eu_mean_hourly_cp])
         ))
+
+        fig.update_layout(margin=dict(l=20, r=20, t=20, b=20))
 
         return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
 
@@ -527,11 +535,14 @@ def update_side_graph(click, fig_choice, year, start, end):
 
         return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
 
-    if fig_choice == 'Low wind power events':
-        x = list(range(2, 10))
-        mask = (daily_cp_eu.timestamp >= start) & (
-            daily_cp_eu.timestamp <= end)
-        y = [num_events(daily_cp_eu[mask], i) for i in range(2, 10)]
+
+
+    if fig_choice == 'Low power events':
+        print(year)
+        x = list(range(1, 9))
+        mask = (daily_cp_eu.timestamp.dt.year >= year) & (
+            daily_cp_eu.timestamp.dt.year <= year)
+        y = [num_events(daily_cp_eu[mask], i) for i in range(1, 9)]
         fig = go.Figure()
         fig2 = None
         fig.add_trace(go.Bar(x=x, y=y, marker_color="red", name="EU"))
@@ -540,13 +551,11 @@ def update_side_graph(click, fig_choice, year, start, end):
             mask = dict()
             for point in click["points"]:
                 selected_country = point["location"]
-                mask[selected_country] = (daily_cp[selected_country].timestamp >= start) & (
-                    daily_cp[selected_country].timestamp <= end)
-                print(start)
-                print(end)
+                mask[selected_country] = (daily_cp[selected_country].timestamp.dt.year >= year) & (
+                    daily_cp[selected_country].timestamp.dt.year <= year)
                 print(len(daily_cp[selected_country][mask[selected_country]]))
                 fig.add_trace(go.Bar(
-                    x=list(range(2, 10)), y=[num_events(daily_cp[selected_country][mask[selected_country]], i) for i in range(2, 10)],
+                    x=list(range(1, 9)), y=[num_events(daily_cp[selected_country][mask[selected_country]], i) for i in range(1, 9)],
                 ))
 
             dfs = [daily_cp[selected_country][mask[selected_country]
@@ -556,7 +565,7 @@ def update_side_graph(click, fig_choice, year, start, end):
             df_means = by_row_index.mean().reset_index()
 
             fig.add_trace(go.Bar(
-                x=list(range(2, 10)), y=[num_events(df_means, i) for i in range(2, 10)],
+                x=list(range(1, 9)), y=[num_events(df_means, i) for i in range(1, 9)],
             ))
 
         if click is not None:
@@ -577,8 +586,7 @@ def update_side_graph(click, fig_choice, year, start, end):
 
             })
 
-            fig2 = calplot(dummy_df, x='ds', y='value', colorscale=[
-                           [0, "rgb(4,204,148)"], [1, "rgb(227,26,28)"]])
+            fig2 = calplot(dummy_df, x='ds', y='value', colorscale=[[0, "rgb(4,204,148)"], [1, "rgb(227,26,28)"]])
 
         # else :
 
@@ -588,7 +596,7 @@ def update_side_graph(click, fig_choice, year, start, end):
 
         #     })
 
-        return [dcc.Graph(figure=fig), (dcc.Graph(figure=fig2) if fig2 else None)],  {}, ({} if click else {"display":"none"})
+        return [dcc.Graph(figure=fig), (dcc.Graph(figure=fig2) if fig2 else None)],  {"display":"none"}, ({} if True else {"display": "none"})
 
     if fig_choice == 'Daily capacity factor distribution':
         fig = go.Figure()
