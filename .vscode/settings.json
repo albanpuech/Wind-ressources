@@ -8,5 +8,12 @@
     "spellright.language": [
         "en",
         "fr"
-    ]
+    ],
+    "jupyter.kernels.filter": [
+        {
+            "path": "c:\\Users\\Alban\\Desktop\\wind ressources\\Wind-ressources\\.venv\\Scripts\\python.exe",
+            "type": "pythonEnvironment"
+        }
+    ],
+    "git.ignoreLimitWarning": true
 }
