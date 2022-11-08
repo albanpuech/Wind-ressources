@@ -23,7 +23,7 @@ Tried :
 - use data of IE for GB do increase training set size
 
 ## What to do :
-- Study correlation between low wind power events and clim indices
+- Try classification for other countries
 
 
 
