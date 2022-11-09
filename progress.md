@@ -7,6 +7,7 @@
 ## 03/11/2022
 - study the corr for diff countries
 - plot choropleith map based on corr
+- Meeting with Wafa
 
 ## 06/11/2022
 - Added catboost and CNN for cp regression 
@@ -21,6 +22,11 @@ Tried :
 - add remove climate indices
 - add capacity factor history to the input 
 - use data of IE for GB do increase training set size
+
+09/11/2022 
+- Used LWP from other countries to classify LWP
+- Used LWP from neighbours countries to classify LWP
+- Meeting 
 
 ## What to do :
 - Try classification for other countries
