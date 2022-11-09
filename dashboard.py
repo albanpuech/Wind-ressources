@@ -54,8 +54,8 @@ country_name_to_iso2 = {
 app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
 
 
-# df = pd.read_csv('dataset_with_timestamp')
-df = pd.read_csv('light')
+df = pd.read_csv('dataset_with_timestamp')
+# df = pd.read_csv('light')
 
 
 df_dict = {
