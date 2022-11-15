@@ -38,13 +38,14 @@ Tried :
 15/11/2022 Afternoon
 - Added nao and ao to see difference of results --> nao and ao don't bring much to the model
 - visualize feature importance 
+- Created clean notebook to present 
 
 ## What to do :
 - Run counterfactuals
 - See feature importance for each country and how it compares to correlation coeff
 - progressively add : Own LWP history
 
-this is a test
+
 
 
 
