@@ -8,3 +8,7 @@ cp_clim_indices_corr.zip
 Untitled-1.ipynb
 /.venv
 /catboost_info
+results.csv
+full_dataset.csv
+df_results_add_nao_ao.csv
+solar

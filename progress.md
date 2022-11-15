@@ -26,10 +26,26 @@ Tried :
 09/11/2022 
 - Used LWP from other countries to classify LWP
 - Used LWP from neighbours countries to classify LWP
-- Meeting 
+- Meeting with naveen 
+- Created dataset with combined cf
+- created TLCC for wind, solar and combined 
+
+15/11/2022 Morning
+- Created classification model with only LWP events of 10 most correlated neighbors
+- choropleth map of most correlated neighbors for each country
+- Run the classification model and store results for each country
+
+15/11/2022 Afternoon
+- Added nao and ao to see difference of results --> nao and ao don't bring much to the model
+- visualize feature importance 
 
 ## What to do :
-- Try classification for other countries
+- Run counterfactuals
+- See feature importance for each country and how it compares to correlation coeff
+- progressively add : Own LWP history
+
+this is a test
+
 
 
 
