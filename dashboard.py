@@ -50,12 +50,13 @@ country_name_to_iso2 = {
     'United_Kingdom': 'GB'
 }
 
+all_country = list(country_name_to_iso2.values())
 
 app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
 
 
-df = pd.read_csv('dataset_with_timestamp')
-# df = pd.read_csv('light')
+# df = pd.read_csv('dataset_with_timestamp')
+df = pd.read_csv('light2')
 
 
 df_dict = {
@@ -66,53 +67,54 @@ df_dict = {
 }
 
 
-df2 = df.copy()
-df2['timestamp'] = pd.to_datetime(df2['timestamp'], format='%Y-%m-%d %H:%M:%S')
-df2["timestamp"] = df2["timestamp"].dt.floor('d')
-df2 = df2[["country", "day", "capacity_factor", "timestamp"]
-          ].groupby(["country", "timestamp"]).mean().reset_index()
-cum_time = dict()
-daily_cp = dict()
+df_daily_cp = df.copy()
+df_daily_cp['timestamp'] = pd.to_datetime(df_daily_cp['timestamp'], format='%Y-%m-%d %H:%M:%S')
+df_daily_cp["timestamp"] = df_daily_cp["timestamp"].dt.floor('d')
+df_daily_cp = df_daily_cp[["country", "day", "capacity_factor", "timestamp"]].groupby(["country", "timestamp"]).mean().reset_index()
+cum_days_dict = dict()
+daily_cp_dict = dict()
 
 for country in country_name_to_iso2.values():
-    daily_cp[country] = df2[df2.country == country]
-    cum_time[country] = [(daily_cp[country]['capacity_factor'] > i).mean()
-                         for i in np.linspace(0, 1, 100)]
+    daily_cp_dict[country] = df_daily_cp[df_daily_cp.country == country]
+    cum_days_dict[country] = [(daily_cp_dict[country]['capacity_factor'] > i).mean() for i in np.linspace(0, 1, 100)]
 
-daily_cp_eu = df2.groupby("timestamp").mean().reset_index()
-cum_time_eu = [(daily_cp_eu.capacity_factor > i).mean()
-               for i in np.linspace(0, 1, 100)]
+daily_cp_eu = df_daily_cp.groupby("timestamp").mean().reset_index()
+cum_days_eu = [(daily_cp_eu.capacity_factor > i).mean() for i in np.linspace(0, 1, 100)]
 
 
-eu_min_hourly_cp = df_dict["hour"].groupby(
-    'hour')['capacity_factor'].mean().min()
-eu_max_hourly_cp = df_dict["hour"].groupby('hour')['capacity_factor'].mean(
-).max()  # mean over country then take min over hours
-eu_mean_hourly_cp = df_dict["hour"].groupby(
-    'hour')['capacity_factor'].mean().mean()
+eu_min_hourly_cp = df_dict["hour"].groupby('hour')['capacity_factor'].mean().min()
+eu_max_hourly_cp = df_dict["hour"].groupby('hour')['capacity_factor'].mean().max()  
+eu_mean_hourly_cp = df_dict["hour"].groupby('hour')['capacity_factor'].mean().mean()
+variation_range_eu_hourly = eu_max_hourly_cp - eu_min_hourly_cp
+
+
+
 min_hourly_cp = df_dict["hour"].groupby(['country'])['capacity_factor'].min()
 max_hourly_cp = df_dict["hour"].groupby(['country'])['capacity_factor'].max()
 mean_hourly_cp = df_dict["hour"].groupby(['country'])['capacity_factor'].mean()
-variation_range_hourly = max_hourly_cp - min_hourly_cp
-variation_range_eu_hourly = eu_max_hourly_cp - eu_min_hourly_cp
-sort_hourly_range = np.argsort(variation_range_hourly)
-sort_hourly = np.argsort(mean_hourly_cp)
+variation_range_hourly = (max_hourly_cp - min_hourly_cp).sort_values()
 
-eu_min_monthly_cp = df_dict["month"].groupby(
-    'month')['capacity_factor'].mean().min()
-eu_max_monthly_cp = df_dict["month"].groupby('month')['capacity_factor'].mean(
-).max()  # mean over country then take min over months
-eu_mean_monthly_cp = df_dict["month"].groupby(
-    'month')['capacity_factor'].mean().mean()
+sort_hourly_mean = np.argsort(mean_hourly_cp)
+min_hourly_cp = min_hourly_cp[sort_hourly_mean]
+max_hourly_cp = max_hourly_cp[sort_hourly_mean]
+mean_hourly_cp = mean_hourly_cp[sort_hourly_mean]
+
+
+eu_min_monthly_cp = df_dict["month"].groupby('month')['capacity_factor'].mean().min()
+eu_max_monthly_cp = df_dict["month"].groupby('month')['capacity_factor'].mean().max() 
+eu_mean_monthly_cp = df_dict["month"].groupby('month')['capacity_factor'].mean().mean()
+variation_range_eu = eu_max_monthly_cp - eu_min_monthly_cp
+
 min_monthly_cp = df_dict["month"].groupby(['country'])['capacity_factor'].min()
 max_monthly_cp = df_dict["month"].groupby(['country'])['capacity_factor'].max()
-mean_monthly_cp = df_dict["month"].groupby(
-    ['country'])['capacity_factor'].mean()
+mean_monthly_cp = df_dict["month"].groupby(['country'])['capacity_factor'].mean()
 std_monthly_cp = df_dict["month"].groupby(['country'])['capacity_factor'].std()
-variation_range = max_monthly_cp - min_monthly_cp
-variation_range_eu = eu_max_monthly_cp - eu_min_monthly_cp
-sort_monthly_range = np.argsort(variation_range)
-sort_monthly = np.argsort(mean_monthly_cp)
+variation_range = (max_monthly_cp - min_monthly_cp).sort_values()
+
+sort_monthly_mean = np.argsort(mean_monthly_cp)
+min_monthly_cp = min_monthly_cp[sort_monthly_mean]
+max_monthly_cp = max_monthly_cp[sort_monthly_mean]
+mean_monthly_cp = mean_monthly_cp[sort_monthly_mean]
 
 
 def num_events(daily_cp, mini_cons_day):
@@ -391,13 +393,10 @@ def update_side_graph(click, fig_choice, year):
 
     if fig_choice == 'Monthly variation range':
 
-        mask = [True for _ in min_hourly_cp.index]
-        if click is not None:
-            mask = [point["location"] for point in click["points"]]
-            mask = np.isin(min_hourly_cp[sort_hourly].index, mask)
-
-        x = variation_range[sort_monthly_range][mask].index
-        y = variation_range[sort_monthly_range][mask].values
+        selected_countries = all_country if click is None else [point["location"] for point in click["points"]]            
+        filtered_df = variation_range[np.isin(variation_range.index,selected_countries)]
+        x = filtered_df.index
+        y = filtered_df.values
 
         fig = go.Figure()
         fig.add_trace(go.Bar(
@@ -452,13 +451,11 @@ def update_side_graph(click, fig_choice, year):
         return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
     if fig_choice == 'Hourly variation range':
 
-        mask = [True for _ in min_hourly_cp.index]
-        if click is not None:
-            mask = [point["location"] for point in click["points"]]
-            mask = np.isin(min_hourly_cp[sort_hourly].index, mask)
+        selected_countries = all_country if click is None else [point["location"] for point in click["points"]]
+        df_filtered = variation_range_hourly[np.isin(variation_range_hourly.index, selected_countries)]
 
-        x = variation_range_hourly[sort_hourly_range][mask].index
-        y = variation_range_hourly[sort_hourly_range][mask].values
+        x = df_filtered.index
+        y = df_filtered.values
 
         fig = go.Figure()
         fig.add_trace(go.Bar(
@@ -475,15 +472,13 @@ def update_side_graph(click, fig_choice, year):
 
     if fig_choice == 'Min, Max, Avg monthly capacity factor':
 
-        mask = [True for _ in min_hourly_cp.index]
-        if click is not None:
-            mask = [point["location"] for point in click["points"]]
-            mask = np.isin(min_hourly_cp[sort_hourly].index, mask)
+        selected_countries = all_country if click is None else [point["location"] for point in click["points"]]
+        mask = np.isin(min_monthly_cp.index,selected_countries)
 
-        x = min_monthly_cp[sort_monthly][mask].index
-        y = mean_monthly_cp[sort_monthly][mask].values
-        error = max_monthly_cp[sort_monthly][mask].values-y
-        error_min = y-min_monthly_cp[sort_monthly][mask].values
+        x = min_monthly_cp[mask].index
+        y = mean_monthly_cp[mask].values
+        error = max_monthly_cp[mask].values-y
+        error_min = y-min_monthly_cp[mask].values
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(
