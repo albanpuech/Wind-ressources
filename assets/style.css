@@ -1,3 +1,13 @@
 .DateInput_input { font-size: 15px;vertical-align: middle; padding:10px; padding-bottom: 15px; }
 
 .DateRangePickerInput_arrow {display: none;}
+
+
+.VirtualizedSelectOption {    
+    display: inline-block;
+    text-align:center;
+}
+
+.Select-value {
+    text-align:center;
+}
