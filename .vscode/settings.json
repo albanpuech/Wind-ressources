@@ -15,5 +15,6 @@
             "type": "pythonEnvironment"
         }
     ],
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "python.analysis.typeCheckingMode": "basic"
 }
