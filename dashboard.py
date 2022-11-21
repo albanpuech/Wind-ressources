@@ -13,8 +13,7 @@ from plotly_calplot import calplot
 # import calplot
 from datetime import date
 import dash_bootstrap_components as dbc
-load_figure_template("slate")
-import dash_gif_component as gif
+load_figure_template("SLATE")
 
 # print(px.data.gapminder()[:15])
 
@@ -55,8 +54,7 @@ app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
 
 
 # df = pd.read_csv('dataset_with_timestamp')
-# df = pd.read_csv('light2')
-df = pd.read_csv('dataset_compressed.csv.gz', compression='gzip')
+df = pd.read_csv('light')
 
 
 df_dict = {
@@ -80,22 +78,6 @@ for country in country_name_to_iso2.values():
 
 daily_cp_eu = df_daily_cp.groupby("timestamp").mean().reset_index()
 cum_days_eu = [(daily_cp_eu.capacity_factor > i).mean() for i in np.linspace(0, 1, 100)]
-
-
-
-df_monthly_cp = df.copy()
-df_montly_cp = df.drop(['timestamp','hour'], axis=1).groupby(['month','year','country']).mean(numeric_only=True).reset_index()
-monthly_cp_dict = dict()
-
-for country in country_name_to_iso2.values():
-    monthly_cp_dict[country] = df_montly_cp[df_montly_cp.country == country].reset_index()
-
-monthly_cp_eu = df_montly_cp.groupby(['month','year']).mean(numeric_only=True).reset_index()
-
-
-
-
-
 
 
 eu_min_hourly_cp = df_dict["hour"].groupby('hour')['capacity_factor'].mean().min()
@@ -133,16 +115,6 @@ max_monthly_cp = max_monthly_cp[sort_monthly_mean]
 mean_monthly_cp = mean_monthly_cp[sort_monthly_mean]
 
 
-
-## compute correlation
-daily_cp_df = pd.DataFrame(np.array([daily_cp_dict[country].capacity_factor for country in all_country]).T, columns = all_country)
-daily_LWP_df= pd.DataFrame(np.array([(daily_cp_dict[country].capacity_factor)<0.1 for country in all_country]).T, columns = all_country)
-# daily_cp_df_melted = daily_cp_df.corr().melt(ignore_index=False, var_name="main_country")
-# daily_LWP_df_melted = daily_LWP_df.corr().melt(ignore_index=False, var_name="main_country")
-
-
-
-
 def num_events(daily_cp, mini_cons_day):
     events = (daily_cp.capacity_factor < 0.1).values
 
@@ -168,37 +140,33 @@ app.layout = html.Div([
         dbc.Card(
             dbc.CardBody([
                 dbc.Row([
-                        dbc.Tooltip("Select the aggregation period and the statistics to display on map",
-                                target="period_stats",
-                            ),
-                        dbc.Col([
-                        dcc.Dropdown(options=[{'label': 'Average...', 'value': 'avg'},
-                                              {'label': 'Std of the...', 'value': 'std'}],
-                                     id="avg_std", value="avg"),
-                        ],width=4),
+                   
                         dbc.Col([
                         dcc.Dropdown(options=[
-                            {'label': '...Yearly capacity factor', 'value': 'year'},
-                            {'label': '...Monthly capacity factor', 'value': 'month'},
-                            {'label': '...Hourly capacity factor', 'value': 'hour'}],
-                            id="period_radio", value="year"),
+                            {'label': 'Yearly capacity factor', 'value': 'year'},
+                            {'label': 'Monthly capacity factor', 'value': 'month'},
+                            {'label': 'Hourly capacity factor', 'value': 'hour'}],
+                            id="period_radio", value="year", optionHeight=60),
                         ]),
-
-                ], id="period_stats"),
-                dbc.Row([dcc.Graph(id='map', style={'height': '50vh'})
-                ], id="map_row"),
-
-
-
+                        dbc.Col([
+                        dcc.Dropdown(options=[{'label': 'Average', 'value': 'avg'},
+                                              {'label': 'Standard deviation of the', 'value': 'std'}],
+                                     id="avg_std", value="avg", optionHeight=60,),
+                        ]),
+                ]),
                 dbc.Row([
-                    dbc.Tooltip("Select the period to display on the map",target="range_slider_row"),
-                    dcc.RangeSlider(1979, 2019, 1, value=[1979, 2019], id='range_slider', marks={
-                    i: {"label":str(i)} for i in range(1979, 2020, 5)}, tooltip={"placement": "bottom", "always_visible": True}),
-                    ],
-                    id="range_slider_row"
+                 
+                        dcc.Graph(id='map', style={'height': '50vh'})
+                ]),
+
+
+              
+                dbc.Row(dcc.RangeSlider(1979, 2019, 1, value=[1979, 2019], id='range_slider', marks={
+                    i: {"label":str(i)} for i in range(1979, 2020, 5)}, tooltip={"placement": "bottom", "always_visible": True})
                 ),
 
-                dbc.Row(children=[], id='evolution', style={'height': '20vh'}
+                dbc.Row(
+                    dcc.Graph(id='evolution', style={'height': '20vh'})
                 )
             ]), style={"height": "90vh", "width": "45vw"}
         ), style={"display": "flex", "justifyContent":"center"}),
@@ -208,19 +176,16 @@ app.layout = html.Div([
             dbc.CardBody([
                 dbc.Row([
                     dbc.Col([
-                        dbc.Tooltip("Select a plot to display",target="plot_selector_col"),
                         dcc.Dropdown(['Min, Max, Avg monthly capacity factor',
                                                 'Min, Max, Avg hourly capacity factor', 'Monthly variation range',
                                                 'Hourly variation range',
                                                 "Cumulative days above thresholds",
-                                                'LWP events',
-                                                'Spatial correlation between LWP day distribution',
-                                                'Spatial correlation between daily capacity factor',
-                                                'Daily capacity factor distribution',
-                                                'YoY (year-over-year) monthly capacity factor comparison'],
-                                            'Hourly variation range', optionHeight=60,id='dropdown'),
-
-                    ], id="plot_selector_col"),
+                                                'Low power events',
+                                                'Daily capacity factor distribution'],
+                                            'Hourly variation range', id='dropdown'),
+                                
+                        # 'height': '60vh'}),
+                    ]),
 
                     dbc.Col([
                         dcc.Dropdown(options=[{'label': x, 'value': x} for x in range(
@@ -243,8 +208,8 @@ app.layout = html.Div([
 
 
 
-                    dcc.Loading(fullscreen=False,children=[dbc.Row(children=[], id='side_graph', style={})]),
-
+                
+                    dbc.Row(children=[], id='side_graph', style={}),
 
 
 
@@ -287,12 +252,8 @@ def update_map(period_radio, avg_std, range):
         df = df[mask]
         if avg_std == "avg":
             df = df.groupby(['country'])['capacity_factor'].mean()
-            # hover = "Country: "+df.index + "<br>Avg capacity factor: " + df.values.astype(str)
         else:
             df = df.groupby(['country'])['capacity_factor'].std()
-            # hover = "Country: "+df.index + "<br>Std capacity factor: " + df.values.astype(str)
-
-
         fig = px.choropleth_mapbox(df,
                                    geojson="https://raw.githubusercontent.com/leakyMirror/map-of-europe/master/GeoJSON/europe.geojson",
                                    featureidkey='properties.ISO2',
@@ -304,12 +265,12 @@ def update_map(period_radio, avg_std, range):
                                    mapbox_style="carto-positron",
                                    color_continuous_scale="Viridis",
                                    opacity=0.5,
+
                                    title='',
                                    )
         # fig.update_layout(
         #     title={"text": 'Average capacity factor of European countries'})
         fig.update_layout(clickmode='event+select')
-        fig.update_layout(coloraxis_colorbar_x=-0.15)
         fig.update_layout(margin=dict(l=20, r=20, t=20, b=40))
         fig.update_layout(
             coloraxis_colorbar=dict(
@@ -333,7 +294,7 @@ def update_map(period_radio, avg_std, range):
 
 
 @app.callback(
-    Output(component_id='evolution', component_property='children'),
+    Output(component_id='evolution', component_property='figure'),
 
     [Input(component_id='period_radio', component_property='value'),
      Input(component_id='range_slider', component_property='value'),
@@ -341,39 +302,35 @@ def update_map(period_radio, avg_std, range):
      ]
 )
 def update_plot(period_radio, range, click):
-    if range[0] == range[1] : return
-    df = df_dict[period_radio]
-    mask = (df[period_radio] >= range[0]) & (df[period_radio] <= range[1])
-    df = df[mask]
-    df_all = df.groupby([period_radio]).mean().reset_index()
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=[], y=[]))
-    fig.add_trace(go.Scatter(x=df_all[period_radio], y=df_all['capacity_factor'], name="EU",
-                                line_shape='linear'))
-    if click is not None:
-        for point in click["points"]:
-            selected_country = point["location"]
-            df_country = df[df.country == selected_country].groupby(
-                [period_radio]).mean().reset_index()
-            fig.add_trace(go.Scatter(x=df_country[period_radio], y=df_country['capacity_factor'], name = selected_country,
-                                        line_shape='linear'))
-    fig.update_yaxes(rangemode="tozero")
-    fig.update_layout(
+    if period_radio is None:
+        raise PreventUpdate
+    else:
+        df = df_dict[period_radio]
+        mask = (df[period_radio] >= range[0]) & (df[period_radio] <= range[1])
+        df = df[mask]
 
-        margin=dict(l=5, r=10, t=10, b=5),
-        # yaxis={"mirror": "allticks", 'side': 'right'},
-        yaxis_title="Capacity factor",
-        xaxis_title=period_radio,
-        font=dict(
-            size=10
-    #     family="system-ui, -apple-system, Segoe UI",
-    ),
-            title=dict(
-            # text='Evolution of the capacity factor',
-            x=0.5,
-            y=1,
-            # yanchor = 'middle',
-            font=dict(
+        df_all = df.groupby([period_radio]).mean().reset_index()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[], y=[]))
+        fig.add_trace(go.Scatter(x=df_all[period_radio], y=df_all['capacity_factor'], name="EU",
+                                 line_shape='linear'))
+        if click is not None:
+            for point in click["points"]:
+                selected_country = point["location"]
+                df_country = df[df.country == selected_country].groupby(
+                    [period_radio]).mean().reset_index()
+                fig.add_trace(go.Scatter(x=df_country[period_radio], y=df_country['capacity_factor'], name = selected_country, 
+                                         line_shape='linear'))
+
+        fig.update_layout(
+            margin=dict(l=5, r=10, t=10, b=5),
+            yaxis={"mirror": "allticks", 'side': 'right'},
+                title=dict(
+                text='Evolution of the capacity factor',
+                x=0.5,
+                y=1,
+                font=dict(
+                    size=10,
         )
     ),
         )
@@ -381,7 +338,7 @@ def update_plot(period_radio, range, click):
 
 
 
-    return dcc.Graph(figure=fig)
+    return fig
 
 
 @app.callback(
@@ -397,105 +354,39 @@ def update_side_graph(click, fig_choice, year):
     if fig_choice is None:
         raise PreventUpdate
 
-
-    if fig_choice == "YoY (year-over-year) monthly capacity factor comparison" :
-
-        # if not click or len(click["points"])!=1 :
-        #     return html.Div("Select one country on the left map to display the correlation between the LWP day distribution of this country and the LWP day distribution of the other European countries", style={"marginTop":"10vh","textAlign":"center"}), {"display": "none"}, {"display": "none"}
-        if click :
-            df = df_montly_cp[df_montly_cp.country.isin([point["location"] for point in click["points"]])].groupby(['month','year']).mean().reset_index()
-            name = ( click["points"][0]["location"] + "_" if len(click["points"])==1 else "selected regions " )
-            color = ('green' if len(click["points"])==1 else 'white')
-        else :
-            df = monthly_cp_eu
-            name = "EU "
-            color = "rgb(187,51,59)"
-
-
-        fig = go.Figure()
-        for year_ in monthly_cp_eu.year.unique() :
-            if year_ != year :
-                fig.add_trace(go.Scatter(x=df[df.year == year_].month, y=df[df.year == year_]['capacity_factor'], name=name+str(year_),
-                                    line_shape='linear',line=dict(color='gray'), opacity=0.2, showlegend = False))
-            if year_ == year :
-                fig.add_trace(go.Scatter(x=df[df.year == year_].month, y=df[df.year == year_]['capacity_factor'], name=name+str(year_),
-                    line_shape='linear',showlegend = False, line=dict(color=color )))
-
-        fig.update_yaxes(rangemode="tozero")
-        fig.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),
-        yaxis_title="Capacity factor",
-        xaxis_title="month",
-    )
-
-
-        return dcc.Graph(figure=fig,style={'height': '80vh'}), {"display": "none"}, {}
-
-
-
-
-
-
     if fig_choice == 'Min, Max, Avg hourly capacity factor':
 
+        selected_countries = all_country if click is None else [point["location"] for point in click["points"]]
+        mask = np.isin(min_hourly_cp.index,selected_countries)
+
+        x = min_hourly_cp[mask].index
+        y = mean_hourly_cp[mask].values
+        error = max_hourly_cp[mask].values-y
+        error_min = y-min_hourly_cp[mask].values
+
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[],y=[]))
         fig.add_trace(go.Scatter(
-        x=["EU"], y=[eu_mean_hourly_cp],
-        mode='markers',
-        showlegend=False,
-        name="EU",
-        error_y=dict(
-            type='data',
-            symmetric=False,
-            array=[eu_mean_hourly_cp-eu_min_hourly_cp],
-            arrayminus=[eu_max_hourly_cp-eu_mean_hourly_cp])
-    ))
+            x=x, y=y,
+            mode='markers',
+            showlegend=False,
+            error_y=dict(
+                type='data',
+                symmetric=False,
+                array=error,
+                arrayminus=error_min)
+        ))
 
-        if click is None :
-            selected_countries = all_country
-            mask = np.isin(min_hourly_cp.index,selected_countries)
-
-            x = min_hourly_cp[mask].index
-            y = mean_hourly_cp[mask].values
-            error = max_hourly_cp[mask].values-y
-            error_min = y-min_hourly_cp[mask].values
-
-            fig.add_trace(go.Scatter(
-                x=x, y=y,
-                mode='markers',
-                showlegend=False,
-                hoverlabel = dict(namelength=0),
-                line=dict(color="gray"),
-                error_y=dict(
-                    type='data',
-                    symmetric=False,
-                    array=error,
-                    arrayminus=error_min)
-            ))
-
-        else :
-            selected_countries = [point["location"] for point in click["points"]]
-            for selected_country in selected_countries :
-                mask = np.isin(min_hourly_cp.index,selected_country)
-                x = min_hourly_cp[mask].index
-                y = mean_hourly_cp[mask].values
-                error = max_hourly_cp[mask].values-y
-                error_min = y-min_hourly_cp[mask].values
-
-                fig.add_trace(go.Scatter(
-                    x=x, y=y,
-                    mode='markers',
-                    showlegend=False,
-                    hoverlabel = dict(namelength=0),
-                    error_y=dict(
-                        type='data',
-                        symmetric=False,
-                        array=error,
-                        arrayminus=error_min)
-                ))
-
-
+        fig.add_trace(go.Scatter(
+            x=["EU"], y=[eu_mean_hourly_cp],
+            mode='markers',
+            showlegend=False,
+            name="EU",
+            error_y=dict(
+                type='data',
+                symmetric=False,
+                array=[eu_mean_hourly_cp-eu_min_hourly_cp],
+                arrayminus=[eu_max_hourly_cp-eu_mean_hourly_cp])
+        ))
 
         fig.update_layout(
         margin=dict(l=20, r=20, t=20, b=20),
@@ -509,48 +400,28 @@ def update_side_graph(click, fig_choice, year):
         # )
     )
 
-        fig.update_yaxes(rangemode="tozero")
 
-        return dcc.Graph(figure=fig,style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
+        return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
 
     if fig_choice == 'Monthly variation range':
 
+        selected_countries = all_country if click is None else [point["location"] for point in click["points"]]            
+        filtered_df = variation_range[np.isin(variation_range.index,selected_countries)]
+        x = filtered_df.index
+        y = filtered_df.values
+
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=[],y=[]))
         fig.add_trace(go.Bar(
-    x=["EU"], y=[variation_range_eu],
-    name="EU",
-    showlegend=False,
+            x=x, y=y,
+            showlegend=False,
+        ))
 
-))
-        if click is None :
-            selected_countries = all_country
-            filtered_df = variation_range[np.isin(variation_range.index,selected_countries)]
-            x = filtered_df.index
-            y = filtered_df.values
+        fig.add_trace(go.Bar(
+            x=["EU"], y=[variation_range_eu],
+            name="EU",
+            showlegend=False,
 
-
-            fig.add_trace(go.Bar(
-                x=x, y=y,
-                hoverlabel = dict(namelength=0),
-                showlegend=False,
-                marker_color = 'gray'
-            ))
-
-        else :
-            selected_countries = [point["location"] for point in click["points"]]
-            for selected_country in  selected_countries :
-                filtered_df = variation_range[np.isin(variation_range.index,selected_country)]
-                x = filtered_df.index
-                y = filtered_df.values
-
-
-                fig.add_trace(go.Bar(
-                    x=x, y=y,
-                    hoverlabel = dict(namelength=0),
-                    showlegend=False,
-                ))
-
+        ))
 
 
 
@@ -565,50 +436,66 @@ def update_side_graph(click, fig_choice, year):
         #     size=18,
         # )
     )
-        fig.update_yaxes(rangemode="tozero")
 
 
-        return dcc.Graph(figure=fig,style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
+        return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
+    if fig_choice == 'Standard deviation of montly capacity factor':
 
+        fig = px.choropleth_mapbox(std_monthly_cp,
+                                   geojson="https://raw.githubusercontent.com/leakyMirror/map-of-europe/master/GeoJSON/europe.geojson",
+                                   featureidkey='properties.ISO2',
+                                   locations=std_monthly_cp.index,  # column in dataframe
+                                   # animation_group ='Area_Name',       #dataframe
+                                   color='capacity_factor',  # dataframe
+                                   #range_color=[0, 0.5],
+                                   zoom=1, center={"lat": 56.4, "lon": 15.0},
+                                   mapbox_style="carto-positron",
+                                   color_continuous_scale="Viridis",
+                                   opacity=0.5,
+                                   title='',
+                                   )
+        # fig.update_layout(
+        #         title={"text": 'Average capacity factor of European countries'})
+        # fig.update_layout(clickmode='event+select')
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title="Std<br>Capacity<br>factor",
+            ))
+
+        fig.update_layout(
+            font=dict(
+                size=10,  # Set the font size here
+            )
+        )
+
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=0, b=0),
+        )
+
+        fig.update_layout(
+            xaxis=go.layout.XAxis(
+                tickangle=45)
+        )
+
+        return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
     if fig_choice == 'Hourly variation range':
 
+        selected_countries = all_country if click is None else [point["location"] for point in click["points"]]
+        df_filtered = variation_range_hourly[np.isin(variation_range_hourly.index, selected_countries)]
+
+        x = df_filtered.index
+        y = df_filtered.values
 
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=[],y=[]))
         fig.add_trace(go.Bar(
-    x=["EU"], y=[variation_range_eu_hourly],
-    name="EU",
-    showlegend=False,
+            x=x, y=y,
+            showlegend=False,
+        ))
 
-))
-        if click is None :
-            selected_countries = all_country
-            filtered_df = variation_range_hourly[np.isin(variation_range_hourly.index,selected_countries)]
-            x = filtered_df.index
-            y = filtered_df.values
-
-
-            fig.add_trace(go.Bar(
-                x=x, y=y,
-                hoverlabel = dict(namelength=0),
-                showlegend=False,
-                marker_color='gray'
-            ))
-
-        else :
-            selected_countries = [point["location"] for point in click["points"]]
-            for selected_country in  selected_countries :
-                filtered_df = variation_range_hourly[np.isin(variation_range_hourly.index,selected_country)]
-                x = filtered_df.index
-                y = filtered_df.values
-
-
-                fig.add_trace(go.Bar(
-                    x=x, y=y,
-                    hoverlabel = dict(namelength=0),
-                    showlegend=False,
-                ))
-
+        fig.add_trace(go.Bar(
+            x=["EU"], y=[variation_range_eu_hourly],
+            showlegend=False,
+        ))
 
         fig.update_layout(
         margin=dict(l=20, r=20, t=20, b=20),
@@ -622,68 +509,40 @@ def update_side_graph(click, fig_choice, year):
         # )
     )
 
-        return dcc.Graph(figure=fig,style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
+        return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
 
     if fig_choice == 'Min, Max, Avg monthly capacity factor':
 
+        selected_countries = all_country if click is None else [point["location"] for point in click["points"]]
+        mask = np.isin(min_monthly_cp.index,selected_countries)
+
+        x = min_monthly_cp[mask].index
+        y = mean_monthly_cp[mask].values
+        error = max_monthly_cp[mask].values-y
+        error_min = y-min_monthly_cp[mask].values
+
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[],y=[]))
         fig.add_trace(go.Scatter(
-        x=["EU"], y=[eu_mean_monthly_cp],
-        mode='markers',
-        showlegend=False,
-        name="EU",
-        error_y=dict(
-            type='data',
-            symmetric=False,
-            array=[eu_mean_monthly_cp-eu_min_monthly_cp],
-            arrayminus=[eu_max_monthly_cp-eu_mean_monthly_cp])
-    ))
+            x=x, y=y,
+            mode='markers',
+            showlegend=False,
+            error_y=dict(
+                type='data',
+                symmetric=False,
+                array=error,
+                arrayminus=error_min)
+        ))
 
-        if click is None :
-            selected_countries = all_country
-            mask = np.isin(min_monthly_cp.index,selected_countries)
-
-            x = min_monthly_cp[mask].index
-            y = mean_monthly_cp[mask].values
-            error = max_monthly_cp[mask].values-y
-            error_min = y-min_monthly_cp[mask].values
-
-            fig.add_trace(go.Scatter(
-                x=x, y=y,
-                mode='markers',
-                showlegend=False,
-                hoverlabel = dict(namelength=0),
-                line=dict(color="gray"),
-                error_y=dict(
-                    type='data',
-                    symmetric=False,
-                    array=error,
-                    arrayminus=error_min)
-            ))
-
-        else :
-            selected_countries = [point["location"] for point in click["points"]]
-            for selected_country in selected_countries :
-                mask = np.isin(min_monthly_cp.index,selected_country)
-                x = min_monthly_cp[mask].index
-                y = mean_monthly_cp[mask].values
-                error = max_monthly_cp[mask].values-y
-                error_min = y-min_monthly_cp[mask].values
-
-                fig.add_trace(go.Scatter(
-                    x=x, y=y,
-                    mode='markers',
-                    showlegend=False,
-                    hoverlabel = dict(namelength=0),
-                    error_y=dict(
-                        type='data',
-                        symmetric=False,
-                        array=error,
-                        arrayminus=error_min)
-                ))
-
-
+        fig.add_trace(go.Scatter(
+            x=["EU"], y=[eu_mean_monthly_cp],
+            mode='markers',
+            showlegend=False,
+            error_y=dict(
+                type='data',
+                symmetric=False,
+                array=[eu_mean_monthly_cp-eu_min_monthly_cp],
+                arrayminus=[eu_max_monthly_cp-eu_mean_monthly_cp])
+        ))
 
         fig.update_layout(
         margin=dict(l=20, r=20, t=20, b=20),
@@ -697,9 +556,9 @@ def update_side_graph(click, fig_choice, year):
         # )
     )
 
-        fig.update_yaxes(rangemode="tozero")
 
-        return dcc.Graph(figure=fig,style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
+
+        return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
 
     if fig_choice == "Cumulative days above thresholds":
 
@@ -716,7 +575,7 @@ def update_side_graph(click, fig_choice, year):
 
         else:
             for selected_country in all_country:
-                fig.add_trace(go.Scatter(x=np.linspace(0, 1, 100), y=cum_days_dict[selected_country], line_shape='linear',name="selected_country", line=dict(
+                fig.add_trace(go.Scatter(x=np.linspace(0, 1, 100), y=cum_days_dict[selected_country], line_shape='linear', line=dict(
                     color='gray'), opacity=0.2, showlegend = False))
 
         fig.update_layout(
@@ -731,95 +590,11 @@ def update_side_graph(click, fig_choice, year):
         # )
     )
 
-        return dcc.Graph(figure=fig,style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
-
-
-    if fig_choice == 'Spatial correlation between daily capacity factor':
-
-
-        if not click or len(click["points"])!=1 :
-            return html.Div("Select one country on the left map to display the correlation between the LWP day distribution of this country and the LWP day distribution of the other European countries", style={"marginTop":"10vh","textAlign":"center"}), {"display": "none"}, {"display": "none"}
-
-        df = daily_cp_df.corr()[click["points"][0]['location']]
-        fig =px.choropleth_mapbox(df,
-        geojson="https://raw.githubusercontent.com/leakyMirror/map-of-europe/master/GeoJSON/europe.geojson",
-        featureidkey='properties.ISO2',
-        locations=df.index,        #column in dataframe
-        color=df,  #dataframe
-            zoom=1, center = {"lat": 56.4, "lon": 15.0},
-            range_color=[0,1.0],
-            mapbox_style="carto-positron",
-            color_continuous_scale="Viridis",
-            opacity = 0.5,
-        )
-        fig.update_layout(
-            coloraxis_colorbar=dict(
-                title='Correlation',
-            ))
-        fig.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),
-        # title="Min, Max, Avg monthly capacity factor",
-
-        # legend_title="Legend Title",
-        # font=dict(
-        #     family="Courier New, monospace",
-        #     size=18,
-        # )
-    )
-        return dcc.Graph(figure=fig,style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
+        return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
 
 
 
-
-
-    if fig_choice == 'Spatial correlation between LWP day distribution':
-
-        if not click or len(click["points"])!=1 :
-            return html.Div("Select one country on the left map to display the correlation between the LWP day distribution of this country and the LWP day distribution of the other European countries", style={"marginTop":"10vh","textAlign":"center"}), {"display": "none"}, {"display": "none"}
-
-        df = daily_LWP_df.corr()[click["points"][0]['location']]
-        fig =px.choropleth_mapbox(df,
-        geojson="https://raw.githubusercontent.com/leakyMirror/map-of-europe/master/GeoJSON/europe.geojson",
-        featureidkey='properties.ISO2',
-        locations=df.index,        #column in dataframe
-        color=df,  #dataframe
-            zoom=1, center = {"lat": 56.4, "lon": 15.0},
-            range_color=[0,0.6],
-            mapbox_style="carto-positron",
-            color_continuous_scale="Viridis",
-            opacity = 0.5,
-        )
-        fig.update_layout(
-            coloraxis_colorbar=dict(
-                title='Correlation',
-            ))
-        fig.update_layout(
-        margin=dict(l=20, r=20, t=20, b=20),
-        # title="Min, Max, Avg monthly capacity factor",
-
-        # legend_title="Legend Title",
-        # font=dict(
-        #     family="Courier New, monospace",
-        #     size=18,
-        # )
-    )
-        return dcc.Graph(figure=fig,style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
-
-
-
-
-    if fig_choice == 'LWP events':
-
-        if not click or len(click["points"])!=1 :
-            return [html.Div("Select a region on the left map to display the number of low wind power (LWP) events during the selected year",style={"marginBottom":"10vh","marginTop":"10vh","textAlign":"center"}),
-        html.Br(),
-        gif.GifPlayer(
-        gif='assets/rec.gif',
-        still='assets/rec.png',
-        autoplay=True,
-        )],{"display": "none"}, {"display": "none"}
-
-
+    if fig_choice == 'Low power events':
         x = list(range(1, 9))
         mask = (daily_cp_eu.timestamp.dt.year >= year) & (
             daily_cp_eu.timestamp.dt.year <= year)
@@ -827,7 +602,7 @@ def update_side_graph(click, fig_choice, year):
         fig = go.Figure()
         fig2 = None
         fig.add_trace(go.Bar(x=[], y=[]))
-        fig.add_trace(go.Bar(x=x, y=y, marker_color="rgb(187,51,59)", name="EU",showlegend=True))
+        fig.add_trace(go.Bar(x=x, y=y, marker_color="rgb(187,51,59)", name="EU"))
 
         if click is not None:
             mask = dict()
@@ -851,20 +626,6 @@ def update_side_graph(click, fig_choice, year):
 
             fig2 = calplot(dummy_df, x='ds', y='value', colorscale=[[0, "rgb(4,204,148)"], [1, "rgb(227,26,28)"]])
 
-
-            fig2.update_layout(
-        title = {
-         'text': "Low wind power days in the selected area in {}".format(year),
-         'y':0.09, # new
-         'x':0.5,
-         'xanchor': 'center',
-         'yanchor': 'top' # new
-        }
-
-    )
-
-
-
             if len(click["points"]) > 1 :
                 fig.add_trace(go.Bar(
                     x=list(range(1, 9)), y=[num_events(df_means, i) for i in range(1, 9)], name="mean capacity<br>factor of selected<br>countries"
@@ -873,8 +634,8 @@ def update_side_graph(click, fig_choice, year):
         fig.update_layout(
         margin=dict(l=20, r=20, t=20, b=20),
         # title="Min, Max, Avg monthly capacity factor",
-        yaxis_title="Number of occurences",
-        xaxis_title="Minimum duration of the low wind power event (days)",
+        yaxis_title="Count",
+        xaxis_title="Minimum duration (days)",
         # legend_title="Legend Title",
         # font=dict(
         #     family="Courier New, monospace",
@@ -883,27 +644,20 @@ def update_side_graph(click, fig_choice, year):
     )
 
 
-
-
-        return [
-            dcc.Graph(figure=fig, style={'height': '50vh'}),
-            (dcc.Graph(figure=fig2, style={'marginTop': '1vh'}) if fig2 else None)],  {"display":"none"}, {}
+        return [dcc.Graph(figure=fig, style={'height': '50vh'}), (dcc.Graph(figure=fig2, style={'marginTop': '4vh'}) if fig2 else None)],  {"display":"none"}, ({} if True else {"display": "none"})
 
     if fig_choice == 'Daily capacity factor distribution':
         fig = go.Figure()
         fig.add_trace(go.Histogram(x=[],y=[]))
         fig.add_trace(go.Histogram(
-            xbins=dict(
-            size=0.05),
             name="EU",
-            showlegend=True,
             marker=dict(color="rgb(187,51,59)"),
             x=daily_cp_eu.capacity_factor, histnorm='percent'))
 
         if click is not None:
             for point in click["points"]:
                 selected_country = point["location"]
-                fig.add_trace(go.Histogram(x=daily_cp_dict[selected_country].capacity_factor, histnorm='percent', name=selected_country, xbins=dict(size=0.05)))
+                fig.add_trace(go.Histogram(x=daily_cp_dict[selected_country].capacity_factor, histnorm='percent', name=selected_country))
 
 
 
@@ -919,7 +673,7 @@ def update_side_graph(click, fig_choice, year):
         # )
     )
 
-        return dcc.Graph(figure=fig, style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
+        return dcc.Graph(figure=fig), {"display": "none"}, {"display": "none"}
 
 
 if __name__ == '__main__':
