@@ -12,3 +12,4 @@ results.csv
 full_dataset.csv
 df_results_add_nao_ao.csv
 solar
+/dataset_compressed.csv.gz
