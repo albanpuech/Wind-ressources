@@ -13,3 +13,5 @@ full_dataset.csv
 df_results_add_nao_ao.csv
 solar
 /dataset_compressed.csv.gz
+/light_full.csv
+/test_dataset
