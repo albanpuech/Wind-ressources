@@ -231,7 +231,7 @@ app.layout = html.Div([html.Div([
 ], style={"height": "100vh","display": "flex","justifyContent":"center","alignItems":"center", "flexDirection": "row"})  # style={"display": "flex", })
 
     ,dbc.Alert(
-            [
+            [   
                 html.I(className="bi bi-check-circle-fill me-2"),
                 html.A('Data source: Bloomfield, Hannah, Brayshaw, David and Charlton-Perez, Andrew (2020)', href="https://doi.org/10.17864/1947.272"),
             ],
@@ -344,7 +344,7 @@ def update_plot(period_radio, range, click):
     df_all = df_select.groupby([period_radio]).mean().reset_index()
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[], y=[]))
-    fig.add_trace(go.Scatter(x=df_all[period_radio], y=df_all['capacity_factor'], name="EU",
+    fig.add_trace(go.Scatter(x=df_all[period_radio], y=df_all['capacity_factor'], name="28",
                                 line_shape='linear'))
     if click is not None:
         for point in click["points"]:
@@ -404,7 +404,7 @@ def update_side_graph(click, fig_choice, year):
             color = ('green' if len(click["points"])==1 else 'white')
         else :
             df_select = monthly_cp_eu
-            name = "EU "
+            name = "28-"
             color = "rgb(187,51,59)"
 
 
@@ -458,10 +458,10 @@ def update_side_graph(click, fig_choice, year):
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[],y=[]))
         fig.add_trace(go.Scatter(
-        x=["EU"], y=[eu_mean_hourly_cp],
+        x=["28"], y=[eu_mean_hourly_cp],
         mode='markers',
         showlegend=False,
-        name="EU",
+        name="28",
         error_y=dict(
             type='data',
             symmetric=False,
@@ -557,8 +557,8 @@ def update_side_graph(click, fig_choice, year):
         fig = go.Figure()
         fig.add_trace(go.Bar(x=[],y=[]))
         fig.add_trace(go.Bar(
-    x=["EU"], y=[variation_range_eu],
-    name="EU",
+    x=["28"], y=[variation_range_eu],
+    name="28",
     showlegend=False,
 
 ))
@@ -640,8 +640,8 @@ def update_side_graph(click, fig_choice, year):
         fig = go.Figure()
         fig.add_trace(go.Bar(x=[],y=[]))
         fig.add_trace(go.Bar(
-    x=["EU"], y=[variation_range_eu_hourly],
-    name="EU",
+    x=["28"], y=[variation_range_eu_hourly],
+    name="28",
     showlegend=False,
 
 ))
@@ -715,10 +715,10 @@ def update_side_graph(click, fig_choice, year):
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[],y=[]))
         fig.add_trace(go.Scatter(
-        x=["EU"], y=[eu_mean_monthly_cp],
+        x=["28"], y=[eu_mean_monthly_cp],
         mode='markers',
         showlegend=False,
-        name="EU",
+        name="28",
         error_y=dict(
             type='data',
             symmetric=False,
@@ -798,7 +798,7 @@ def update_side_graph(click, fig_choice, year):
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[],y=[]))
         fig.add_trace(go.Scatter(x=np.linspace(0, 1, 100), y=cum_days_eu,
-                      line_shape='linear', line=dict(color="rgb(187,51,59)"), name="EU"))
+                      line_shape='linear', line=dict(color="rgb(187,51,59)"), name="28"))
 
 
 
@@ -942,7 +942,7 @@ def update_side_graph(click, fig_choice, year):
         fig = go.Figure()
         fig2 = None
         fig.add_trace(go.Bar(x=[], y=[]))
-        fig.add_trace(go.Bar(x=x, y=y, marker_color="rgb(187,51,59)", name="EU",showlegend=True))
+        fig.add_trace(go.Bar(x=x, y=y, marker_color="rgb(187,51,59)", name="28",showlegend=True))
 
         if click is not None:
             mask = dict()
@@ -1017,7 +1017,7 @@ def update_side_graph(click, fig_choice, year):
         fig.add_trace(go.Histogram(
             xbins=dict(
             size=0.05),
-            name="EU",
+            name="28",
             showlegend=True,
             marker=dict(color="rgb(187,51,59)"),
             x=daily_cp_eu.capacity_factor, histnorm='percent'))
