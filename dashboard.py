@@ -305,16 +305,16 @@ def toggle_modal(n1, is_open):
     Input(component_id='period_radio', component_property='value')
 )
 def update_slider(period_radio):
-    months = ['Jan', "Feb", "Mar", "Apr", "May", "Jun",
-              "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"]
+    months = {1:'Jan', 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun",
+              7:"Jul", 8:"Aug", 9:"Sept", 10:"Oct", 11:"Nov", 12:"Dec"}
     min = df_dict[period_radio][period_radio].min()
     max = df_dict[period_radio][period_radio].max()
     if period_radio == 'month':
-        marks = {i: months[i] for i in range(min, max, 1)}
+        marks = {i: months[i] for i in range(min, max+1, 1)}
     if period_radio == 'year':
-        marks = {i: str(i) for i in range(min, max, 5)}
+        marks = {i: str(i) for i in range(min, max+1, 5)}
     if period_radio == 'hour':
-        marks = {i: str(i)+':00' for i in range(min, max, 2)}
+        marks = {i: str(i)+':00' for i in range(min, max+1, 2)}
 
     return min, max, marks, [min, max]
 
