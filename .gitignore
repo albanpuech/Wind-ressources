@@ -1,17 +1,7 @@
 /env
-/Untitled-1.ipynb
-/light2
-/light
-/dataset.csv
 /dataset_with_timestamp
-cp_clim_indices_corr.zip
-Untitled-1.ipynb
 /.venv
 /catboost_info
-results.csv
 full_dataset.csv
-df_results_add_nao_ao.csv
 solar
 /dataset_compressed.csv.gz
-/light_full.csv
-/test_dataset
