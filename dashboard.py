@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import time
-
+from scipy.stats import pearsonr
 import dash
 from dash import html
 from dash import dcc
@@ -184,6 +184,7 @@ app.layout = html.Div([html.Div([
                                       'Intra-day variation range of the hourly capacity factor',
                                       "Cumulative days above thresholds",
                                       'LWP events',
+                                       "Inter-annual variability of the number of LWP days",
                                       'Spatial correlation between LWP day distribution',
                                       'Spatial correlation between daily capacity factor',
                                       'Daily capacity factor distribution',
@@ -272,8 +273,11 @@ dbc.Alert(
     [   html.I(className="bi bi-info-circle-fill me-2"),
         html.Span("Help and Notations", id="open-lg", n_clicks=0, style={"textDecoration": "underline","marginRight": "15px","cursor":"pointer"}),
         html.I(className="bi bi-check-circle-fill me-2"),
-        html.A('Data source: Bloomfield, Hannah, Brayshaw, David and Charlton-Perez, Andrew (2020)',
-               href="https://doi.org/10.17864/1947.272"),
+        html.Span(html.A('Data source', href="https://doi.org/10.17864/1947.272"), style={"textDecoration": "underline","marginRight": "15px","cursor":"pointer"}),
+        html.I(className="bi bi-check-circle-fill me-2"),
+        html.Span(html.A('Data generation (Bloomfield, H.C., Brayshaw, D. and Charlton-Perez, A. 2020)',href="https://doi.org/10.1002/met.1858"), style={"textDecoration": "underline","marginRight": "15px","cursor":"pointer"}),
+
+        
     ],
     color="dark",
 
@@ -431,6 +435,46 @@ def update_plot(period_radio, range, click):
 def update_side_graph(click, fig_choice, year):
     if fig_choice is None:
         raise PreventUpdate
+
+    if fig_choice == "Inter-annual variability of the number of LWP days" :
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[], y=[]))
+        lwp = daily_cp_eu_entire_period[["year","capacity_factor"]]
+        lwp['count'] = (lwp.capacity_factor<0.1)
+        lwp = lwp[['count','year']].groupby("year").sum().reset_index()
+        fig.add_trace(go.Scatter(x=lwp["year"], y=lwp["count"], name="28C",line_shape='linear', 
+        showlegend=True,
+        marker=dict(color="rgb(187,51,59)"),))
+
+        if click :
+            selected_countries = [point["location"]
+                                  for point in click["points"]]
+            
+            lwp_count_per_year_dict = dict()
+            for selected_country in selected_countries:
+                lwp = df_daily_cp[df_daily_cp.country==selected_country][["year","capacity_factor"]]
+                lwp['count'] = (lwp.capacity_factor<0.1)
+                lwp = lwp[['count','year']].groupby("year").sum().reset_index()
+                lwp_count_per_year_dict[selected_country] = lwp
+            
+            for selected_country in selected_countries:
+                fig.add_trace(go.Scatter(x=lwp_count_per_year_dict[selected_country]["year"], y=lwp_count_per_year_dict[selected_country]["count"], name = selected_country, showlegend=True))
+                
+            
+
+
+        fig.update_layout(
+            margin=dict(l=20, r=20, t=20, b=20),
+            xaxis_title="Year",
+            yaxis_title="Number of low wind power days",
+
+        )
+        fig.update_yaxes(rangemode="tozero")
+
+
+        return dcc.Graph(figure=fig, style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
+
+
 
     if fig_choice == "YoY (year-over-year) monthly capacity factor comparison":
 
@@ -859,12 +903,16 @@ def update_side_graph(click, fig_choice, year):
         if not click or len(click["points"]) != 1:
             return html.Div("Select only one country on the left map to display the correlation between the LWP day distribution of this country and the LWP day distribution of the other European countries", style={"marginTop": "10vh", "textAlign": "center"}), {"display": "none"}, {"display": "none"}
 
-        df_select = daily_cp_df.corr()[click["points"][0]['location']]
-        fig = px.choropleth_mapbox(df_select,
+
+        selected_countries = click["points"][0]['location']
+        rho = abs(daily_cp_df.corr()[selected_countries])
+        pval = (daily_cp_df.corr(method=lambda x, y: pearsonr(x, y)[1]) - np.eye(*rho.shape))[selected_countries] 
+        rho[pval>0.05]=np.NaN
+        fig = px.choropleth_mapbox(rho,
                                    geojson="https://raw.githubusercontent.com/leakyMirror/map-of-europe/master/GeoJSON/europe.geojson",
                                    featureidkey='properties.ISO2',
-                                   locations=df_select.index,
-                                   color=df_select,
+                                   locations=rho.index,
+                                   color=rho,
                                    zoom=1, center={"lat": 56.4, "lon": 15.0},
                                    range_color=[0, 1.0],
                                    mapbox_style="carto-positron",
@@ -873,24 +921,31 @@ def update_side_graph(click, fig_choice, year):
                                    )
         fig.update_layout(
             coloraxis_colorbar=dict(
-                title='Correlation<br>(1979-2019)',
+                title='Absolute<br>correlation<br>(1979-2019)',
             ))
         fig.update_layout(
             margin=dict(l=20, r=20, t=20, b=20),
         )
+
+        fig.add_annotation(text="only statistically significant correlations (p-value > 0.05) are displayed",
+            xref="paper", yref="paper",
+            x=0, y=0, showarrow=False,font=dict(size=10,color="black"))
+
         return dcc.Graph(figure=fig, style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
 
     if fig_choice == 'Spatial correlation between LWP day distribution':
 
         if not click or len(click["points"]) != 1:
             return html.Div("Select one country on the left map to display the correlation between the LWP day distribution of this country and the LWP day distribution of the other European countries", style={"marginTop": "10vh", "textAlign": "center"}), {"display": "none"}, {"display": "none"}
-
-        df_select = daily_LWP_df.corr()[click["points"][0]['location']]
-        fig = px.choropleth_mapbox(df_select,
+        selected_countries = click["points"][0]['location']
+        rho = abs(daily_LWP_df.corr()[selected_countries])
+        pval = (daily_LWP_df.corr(method=lambda x, y: pearsonr(x, y)[1]) - np.eye(*rho.shape))[selected_countries] 
+        rho[pval>0.05]=np.NaN
+        fig = px.choropleth_mapbox(rho,
                                    geojson="https://raw.githubusercontent.com/leakyMirror/map-of-europe/master/GeoJSON/europe.geojson",
                                    featureidkey='properties.ISO2',
-                                   locations=df_select.index,
-                                   color=df_select,
+                                   locations=rho.index,
+                                   color=rho,
                                    zoom=1, center={"lat": 56.4, "lon": 15.0},
                                    range_color=[0, 0.6],
                                    mapbox_style="carto-positron",
@@ -899,11 +954,18 @@ def update_side_graph(click, fig_choice, year):
                                    )
         fig.update_layout(
             coloraxis_colorbar=dict(
-                title='Correlation<br>(1979-2019)',
+                title='Absolute<br>correlation<br>(1979-2019)',
             ))
+
+        fig.add_annotation(text="only statistically significant correlations (p-value > 0.05) are displayed",
+                  xref="paper", yref="paper",
+            x=0, y=0, showarrow=False,font=dict(size=10,color="black"))
+
         fig.update_layout(
             margin=dict(l=20, r=20, t=20, b=20),
         )
+
+        
         return dcc.Graph(figure=fig, style={'height': '80vh'}), {"display": "none"}, {"display": "none"}
 
     if fig_choice == 'LWP events':
