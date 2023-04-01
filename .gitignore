@@ -4,4 +4,10 @@
 /catboost_info
 full_dataset.csv
 solar
+/european_wholesale_electricity_price_data_hourly.csv
+/out.csv
+/out.csv.gz
+/prices.csv
+/small.csv.gz
+/__pycache__
 /dataset_compressed.csv.gz
