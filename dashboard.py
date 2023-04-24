@@ -149,7 +149,6 @@ df_prices_dict = {
 
 def compute_combined_cp(df: pd.DataFrame, wind_share_percent: int) -> pd.DataFrame:
     wind_share = wind_share_percent / 100
-    assert wind_share <= 1 and wind_share >= 0
     df.loc[:, "capacity_factor"] = (
         wind_share * df["capacity_factor_w"]
         + (1 - wind_share) * df["capacity_factor_s"]
@@ -179,7 +178,6 @@ def compute_df_daily_lp_corr(wind_share_percent: int) -> pd.DataFrame:
 
 def num_events(daily_cp: pd.DataFrame, mini_cons_day: int) -> int:
     events = (daily_cp.capacity_factor < 0.1).values
-
     counter = 0
     seq = 0
 
@@ -601,9 +599,10 @@ def update_slider(
 def update_map(period_radio, avg_std, range, _, wind_share_percent):
     if period_radio is None:
         raise PreventUpdate
-    df = compute_combined_cp(df_dict[period_radio], wind_share_percent)
+
+    df = df_dict[period_radio]
     mask = (df[period_radio] >= range[0]) & (df[period_radio] <= range[1])
-    df = df[mask]
+    df = compute_combined_cp(df[mask], wind_share_percent)
     df = (
         df.groupby(["country"])["capacity_factor"].mean()
         if avg_std == "avg"
@@ -622,22 +621,19 @@ def update_map(period_radio, avg_std, range, _, wind_share_percent):
         opacity=0.5,
         title="",
     )
-    fig.update_layout(clickmode="event+select")
-    fig.update_layout(coloraxis_colorbar_x=-0.15)
-    fig.update_layout(margin=dict(l=20, r=20, t=20, b=20))
-    fig.update_layout(
-        coloraxis_colorbar=dict(
-            title="Capacity <br>factor",
-        )
-    )
 
     fig.update_layout(
         font=dict(
             size=10,
-        )
+        ),
+        xaxis=go.layout.XAxis(tickangle=45),
+        coloraxis_colorbar=dict(
+            title="Capacity <br>factor",
+        ),
+        margin=dict(l=20, r=20, t=20, b=20),
+        coloraxis_colorbar_x=-0.15,
+        clickmode="event+select",
     )
-
-    fig.update_layout(xaxis=go.layout.XAxis(tickangle=45))
 
     return fig, None
 
@@ -658,9 +654,9 @@ def update_plot(
     if range[0] == range[1]:
         return
 
-    df_select = compute_combined_cp(df_dict[period_radio], wind_share_percent)
+    df_select = df_dict[period_radio]
     mask = (df_select[period_radio] >= range[0]) & (df_select[period_radio] <= range[1])
-    df_select = df_select[mask]
+    df_select = compute_combined_cp(df_select[mask], wind_share_percent)
     df_all = df_select.groupby([period_radio]).mean().reset_index()
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[], y=[]))
@@ -772,7 +768,6 @@ def update_side_graph(
         )
 
     if fig_choice == "Day-ahead prices (Daily average)":
-
         fig = go.Figure()
 
         if click is None:
@@ -793,7 +788,6 @@ def update_side_graph(
             selected_countries = [point["location"] for point in click["points"]]
 
             for country_iso in selected_countries:
-
                 if len(df_prices_dict[country_iso]) == 0:
                     return (
                         [
@@ -871,7 +865,6 @@ def update_side_graph(
         )
 
     if fig_choice == "YoY (year-over-year) monthly capacity factor comparison":
-
         if click:
             df_select = (
                 compute_combined_cp(df_month_all_years, wind_share_percent)[
@@ -930,7 +923,6 @@ def update_side_graph(
         return dcc.Graph(figure=fig, style={"height": "80vh"}), {"display": "none"}, {}
 
     if fig_choice == "Min, Max, Avg intra-day hourly capacity factor":
-
         df_hourly = compute_combined_cp(
             df_hourly_all_years.drop(["year"], axis=1)[
                 df_hourly_all_years.year == year
@@ -1030,7 +1022,6 @@ def update_side_graph(
         return dcc.Graph(figure=fig, style={"height": "80vh"}), {"display": "none"}, {}
 
     if fig_choice == "Intra-year variation range of the monthly capacity factor":
-
         df_month = compute_combined_cp(
             df_month_all_years.drop(["year"], axis=1)[df_month_all_years.year == year],
             wind_share_percent,
@@ -1115,7 +1106,6 @@ def update_side_graph(
         return dcc.Graph(figure=fig, style={"height": "80vh"}), {"display": "none"}, {}
 
     if fig_choice == "Intra-day variation range of the hourly capacity factor":
-
         start_time = time.time()
 
         df_hourly = compute_combined_cp(
@@ -1175,7 +1165,6 @@ def update_side_graph(
             )
 
         else:
-
             start_time = time.time()
             selected_countries = [point["location"] for point in click["points"]]
             for selected_country in selected_countries:
@@ -1204,7 +1193,6 @@ def update_side_graph(
         return dcc.Graph(figure=fig, style={"height": "80vh"}), {"display": "none"}, {}
 
     if fig_choice == "Min, Max, Avg monthly capacity factor":
-
         df_month = compute_combined_cp(
             df_month_all_years.drop(["year"], axis=1)[df_month_all_years.year == year],
             wind_share_percent,
@@ -1310,15 +1298,9 @@ def update_side_graph(
         return dcc.Graph(figure=fig, style={"height": "80vh"}), {"display": "none"}, {}
 
     if fig_choice == "Cumulative days above thresholds":
-
-        daily_cp_eu = (
-            compute_combined_cp(df_daily_cp, wind_share_percent)[
-                df_daily_cp.year == year
-            ]
-            .groupby("day")
-            .mean(numeric_only=True)
-            .reset_index()
-        )
+        df = df_daily_cp[df_daily_cp.year == year]
+        df = compute_combined_cp(df, wind_share_percent)
+        daily_cp_eu = df.groupby("day").mean(numeric_only=True)
         cum_days_eu = [
             (daily_cp_eu.capacity_factor > i).mean() for i in np.linspace(0, 1, 100)
         ]
@@ -1337,49 +1319,24 @@ def update_side_graph(
 
         if click is not None:
             selected_countries = [point["location"] for point in click["points"]]
-            cum_days_dict = dict()
-            daily_cp_dict = dict()
-            df_daily_cp_year = compute_combined_cp(
-                df_daily_cp[df_daily_cp.year == year], wind_share_percent
-            )
-            for country in selected_countries:
-                daily_cp_dict[country] = df_daily_cp_year[
-                    df_daily_cp_year.country == country
-                ]
-                cum_days_dict[country] = [
-                    (daily_cp_dict[country]["capacity_factor"] > i).mean()
-                    for i in np.linspace(0, 1, 100)
-                ]
-
             for selected_country in selected_countries:
+                df = df[np.isin(df.country, selected_countries)]
+                df_country = df[df.country == selected_country]["capacity_factor"]
                 fig.add_trace(
                     go.Scatter(
                         x=np.linspace(0, 1, 100),
-                        y=cum_days_dict[selected_country],
+                        y=[(df_country > i).mean() for i in np.linspace(0, 1, 100)],
                         line_shape="linear",
                         name=selected_country,
                     )
                 )
 
             if len(selected_countries) > 1:
+                daily_cp_region = df.groupby(["day"])["capacity_factor"].mean(
+                    numeric_only=True
+                )
                 cum_days_region = [
-                    (
-                        pd.Series(
-                            np.mean(
-                                np.stack(
-                                    [
-                                        daily_cp_dict[
-                                            selected_country
-                                        ].capacity_factor.tolist()
-                                        for selected_country in selected_countries
-                                    ]
-                                ),
-                                axis=0,
-                            )
-                        )
-                        > i
-                    ).mean()
-                    for i in np.linspace(0, 1, 100)
+                    (daily_cp_region > i).mean() for i in np.linspace(0, 1, 100)
                 ]
                 fig.add_trace(
                     go.Scatter(
@@ -1391,25 +1348,15 @@ def update_side_graph(
                 )
 
         else:
-            cum_days_dict = dict()
-            daily_cp_dict = dict()
-            df_daily_cp_year = compute_combined_cp(
-                df_daily_cp[df_daily_cp.year == year], wind_share_percent
-            )
-            for country in all_country:
-                daily_cp_dict[country] = df_daily_cp_year[
-                    df_daily_cp_year.country == country
-                ]
-                cum_days_dict[country] = [
-                    (daily_cp_dict[country]["capacity_factor"] > i).mean()
-                    for i in np.linspace(0, 1, 100)
-                ]
-
             for selected_country in all_country:
+                daily_cp_country = df[df.country == selected_country]["capacity_factor"]
                 fig.add_trace(
                     go.Scatter(
                         x=np.linspace(0, 1, 100),
-                        y=cum_days_dict[selected_country],
+                        y=[
+                            (daily_cp_country > i).mean()
+                            for i in np.linspace(0, 1, 100)
+                        ],
                         line_shape="linear",
                         name=selected_country,
                         line=dict(color="gray"),
@@ -1427,7 +1374,6 @@ def update_side_graph(
         return dcc.Graph(figure=fig, style={"height": "80vh"}), {"display": "none"}, {}
 
     if fig_choice == "Spatial correlation between daily capacity factor":
-
         if not click or len(click["points"]) != 1:
             return (
                 html.Div(
@@ -1484,7 +1430,6 @@ def update_side_graph(
         )
 
     if fig_choice == "Spatial correlation between LP day distribution":
-
         if not click or len(click["points"]) != 1:
             return (
                 html.Div(
@@ -1541,7 +1486,6 @@ def update_side_graph(
         )
 
     if fig_choice == "Climate indices and LP events":
-
         if not click or len(click["points"]) < 1:
             return (
                 [
@@ -1689,7 +1633,6 @@ def update_side_graph(
         return dcc.Graph(figure=fig, style={"height": "80vh"}), {"display": "none"}, {}
 
     if fig_choice == "LP events":
-
         if not click or len(click["points"]) < 1:
             return (
                 [
@@ -1712,45 +1655,34 @@ def update_side_graph(
                 {"display": "none"},
             )
 
-        x = list(range(1, 9))
-        mask = (daily_cp_eu_entire_period.year >= year) & (
-            daily_cp_eu_entire_period.year <= year
-        )
-        y = [
-            num_events(
-                compute_combined_cp(
-                    daily_cp_eu_entire_period[mask], wind_share_percent
-                ),
-                i,
-            )
-            for i in range(1, 9)
-        ]
         fig = go.Figure()
-        fig2 = None
         fig.add_trace(go.Bar(x=[], y=[]))
-        fig.add_trace(
-            go.Bar(x=x, y=y, marker_color="rgb(187,51,59)", name="28C", showlegend=True)
-        )
+        fig.add_trace(go.Bar(x=[], y=[]))
+
+        # fig.add_trace(
+        #     go.Bar(x=x, y=y, marker_color="rgb(187,51,59)", name="28C", showlegend=True)
+        # )
 
         if click is not None:
-            mask = dict()
-            for point in click["points"]:
-                selected_country = point["location"]
-                mask[selected_country] = (
-                    df_daily_cp[df_daily_cp.country == selected_country].year >= year
-                ) & (df_daily_cp[df_daily_cp.country == selected_country].year <= year)
+            selected_countries = [point["location"] for point in click["points"]]
+            mask = (
+                (df_daily_cp.year >= year)
+                & (df_daily_cp.year <= year)
+                & (np.isin(df_daily_cp.country, selected_countries))
+            )
+            df = compute_combined_cp(
+                df_daily_cp[mask],
+                wind_share_percent,
+            )
+
+            for selected_country in selected_countries:
                 fig.add_trace(
                     go.Bar(
                         name=selected_country,
                         x=list(range(1, 9)),
                         y=[
                             num_events(
-                                compute_combined_cp(
-                                    df_daily_cp[
-                                        df_daily_cp.country == selected_country
-                                    ][mask[selected_country]],
-                                    wind_share_percent,
-                                ),
+                                df[df.country == selected_country],
                                 i,
                             )
                             for i in range(1, 9)
@@ -1758,18 +1690,13 @@ def update_side_graph(
                     )
                 )
 
-            dfs = [
-                df_daily_cp[df_daily_cp.country == selected_country][
-                    mask[selected_country]
-                ].reset_index()
-                for selected_country in mask.keys()
-            ]
-            df_concat = compute_combined_cp(pd.concat(dfs), wind_share_percent)
-            by_row_index = df_concat.groupby(df_concat.day)
+            by_row_index = df.groupby(df.day)
             df_means = by_row_index.mean().reset_index()
             dummy_df = pd.DataFrame(
                 {
-                    "ds": pd.date_range(dfs[0].day.values[0], dfs[0].day.values[-1]),
+                    "ds": pd.date_range(
+                        df_means.day.values[0], df_means.day.values[-1]
+                    ),
                     "value": (df_means.capacity_factor < 0.1).values.astype(int),
                 }
             )
@@ -1818,7 +1745,6 @@ def update_side_graph(
         )
 
     if fig_choice == "Daily capacity factor distribution":
-
         daily_cp_eu = compute_combined_cp(
             df_daily_cp[df_daily_cp.year == year].groupby("day").mean().reset_index(),
             wind_share_percent,
